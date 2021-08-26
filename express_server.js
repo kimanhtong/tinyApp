@@ -58,17 +58,21 @@ app.get("/urls/:shortURL", (req, res) => {
   res.render("urls_show", templateVars);
 });
 
+app.get("/u/:shortURL", (req, res) => {
+  const longURL = urlDatabase[req.params.shortURL];
+  res.redirect(longURL);
+});
+
 ////////////////////////////////////////////////////////////
 // TinyApp -POST requests and responses
 
 app.post("/urls", (req, res) => {
   console.log(req.body);  // Log the POST request body to the console
-  res.send("Ok");         // Respond with 'Ok' (we will replace this)
+  //res.send("Ok");         // Respond with 'Ok' (we will replace this)
   let shortURL = generateRandomString(6);
   urlDatabase[shortURL] = req.body.longURL;
-  const templateVars = { urls: urlDatabase };
-  //res.render("urls_index", templateVars);
-
+  const templateVars = { shortURL, longURL: req.body.longURL};
+  res.render("urls_show", templateVars);
 });
 
 ////////////////////////////////////////////////////////////
@@ -77,3 +81,4 @@ app.post("/urls", (req, res) => {
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
+            
