@@ -82,10 +82,25 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   res.redirect("/urls");
 });
 
+// Log user in
+app.post("/urls/login", (req, res) => {
+  res.send("Server Error")
+  //res.redirect("/urls");
+});
+
+// Update an existing route from database
+app.post("/urls/:shortURL", (req, res) => {
+  console.log(`Updated ${req.params.shortURL}`);  // Log the POST request body to the console
+  let shortURL = req.params.shortURL;
+  urlDatabase[shortURL] = req.body.longURL;
+  res.redirect("/urls");
+});
+
+
+
 ////////////////////////////////////////////////////////////
 // TinyApp end
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
-            
