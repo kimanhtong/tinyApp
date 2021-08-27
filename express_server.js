@@ -47,7 +47,7 @@ app.get("/urls.json", (req, res) => {
 app.get("/urls/new", (req, res) => {
   res.render("urls_new");
 });
-
+  
 app.get("/urls", (req, res) => {
   const templateVars = { urls: urlDatabase };
   res.render("urls_index", templateVars);
@@ -65,14 +65,21 @@ app.get("/u/:shortURL", (req, res) => {
 
 ////////////////////////////////////////////////////////////
 // TinyApp -POST requests and responses
-
+// Add a new route to database
 app.post("/urls", (req, res) => {
   console.log(req.body);  // Log the POST request body to the console
-  //res.send("Ok");         // Respond with 'Ok' (we will replace this)
   let shortURL = generateRandomString(6);
   urlDatabase[shortURL] = req.body.longURL;
   const templateVars = { shortURL, longURL: req.body.longURL};
   res.render("urls_show", templateVars);
+});
+
+// Delete an existing route from database
+app.post("/urls/:shortURL/delete", (req, res) => {
+  console.log(`Deleted ${req.body.shortURL}`);  // Log the POST request body to the console
+  let shortURL = req.params.shortURL;
+  delete urlDatabase[shortURL];
+  res.redirect("/urls");
 });
 
 ////////////////////////////////////////////////////////////
