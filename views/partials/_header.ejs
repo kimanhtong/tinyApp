@@ -12,22 +12,24 @@
     </div>
     
     <% if (user) { %>
-      <form class="form-inline" action="/urls/logout" method="POST">
+      <form class="form-inline" action="/logout" method="POST">
         <div class="form-group mb-2">
           <input class="form-control" type="text" name="user" disabled placeholder= "Logged In As: <%= user.email %>" style="width: 300px; margin: 1em; background-color: inherit; border-color:transparent; text-align: right;">
-          <button type="submit" class="btn btn-primary" style = "color: white; border-color: gray; background-color: green; border-radius: 5px; align-self: right;">Logout</button>
+           <button type="submit" class="btn btn-primary" style = "color: white; border-color: gray; background-color: green; border-radius: 5px; align-self: right;">Logout</button>
         </div>
       </form>
+      <!-- <div class="navbar-nav" id="navbarNavAltMarkup">
+        <a class="nav-item nav-link" href="/logout" style="text-align: right;">Log Out</a>
+        <a disabled class="nav-item nav-link" href=""  style="text-align: right;">Logged In As: <%= user.email %></a>
+      </div> -->
+
     <% } %>
 
     <% if (!user) { %>
-      <form class="form-inline" action="/urls/login" method="POST">
-        <div class="form-group mb-2">
-          <input class="form-control" type="text" name="user" style="width: 300px; margin: 1em">
-          <button type="submit" class="btn btn-primary" style = "color: white; border-color: gray; background-color: green; border-radius: 5px; align-self: right;">Login</button>
-        </div>
-      </form>
-  
+      <div class="navbar-nav" id="navbarNavAltMarkup">
+        <a class="nav-item nav-link" href="/login" style="text-align: right;">Log In</a>
+        <a class="nav-item nav-link" href="/register" style="text-align: right;">Register</a>
+      </div>
     <% } %>
 
     

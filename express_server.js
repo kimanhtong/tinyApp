@@ -45,7 +45,7 @@ const users = {
 // Declarations of functions
 
 // Function to get a random shortURL string
-function generateRandomString(length) {
+const generateRandomString = (length) => {
   let characters = 'abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   let string = '';
   for (let i = 0; i < length; i++) {
@@ -54,6 +54,35 @@ function generateRandomString(length) {
   }
   return string;
 }
+
+// Function to look up an email. Return true if found and false if not found in DB
+const emailLookUp = (email) => {
+  for (const key in users) {
+    if (users[key].email === email) {
+      return true; 
+    }
+  }
+  return false;
+}
+
+// Function to validate empty email
+const emailVal = (email) => {
+  if (email ==='') {
+    return false;
+  } else {
+    return true;
+  }
+};
+
+// Function to validate empty password
+const passwordVal = (password) => {
+  if (password ==='') {
+    return false;
+  } else {
+    return true;
+  }
+};
+
 ////////////////////////////////////////////////////////////
 // For testing or practice purposes - to be updated
 
@@ -72,14 +101,20 @@ app.get("/urls.json", (req, res) => {
 ////////////////////////////////////////////////////////////
 // TinyApp -GET requests and responses
 
-// Launch the New page to add a new short-long URL pair.
-app.get("/urls/new", (req, res) => {
+// Launch Log In page
+app.get("/login", (req, res) => {
   const templateVars = {
     user: req.cookies["user"]
   }
-  res.render("urls_new", templateVars);
-  //res.render("urls_new");
+  res.render("urls_login", templateVars);
+});
 
+// Launch Register page
+app.get("/register", (req, res) => {
+  const templateVars = {
+    user: req.cookies["user"]
+  }
+  res.render("urls_register", templateVars);
 });
 
 // Launch the Index page = home page
@@ -91,9 +126,14 @@ app.get("/urls", (req, res) => {
   res.render("urls_index", templateVars);
 });
 
-// Launch Log In page
-app.get("/urls/register", (req, res) => {
-  res.render("urls_register");
+// Launch the New page to add a new short-long URL pair.
+app.get("/urls/new", (req, res) => {
+  const templateVars = {
+    user: req.cookies["user"]
+  }
+  res.render("urls_new", templateVars);
+  //res.render("urls_new");
+
 });
 
 // Launch detail page of a shortURL
@@ -115,6 +155,56 @@ app.get("/u/:shortURL", (req, res) => {
 ////////////////////////////////////////////////////////////
 // TinyApp -POST requests and responses
 
+// Log user in
+app.post("/login", (req, res) => {
+  let loggedUser = {
+    email: req.body.email,
+    password: req.body.password
+  }
+  for (let user in users) {
+    if (user.email === loggedUser.email && user.password === loggedUser.password) {
+      res.cookie("user",loggedUser);
+      //res.send ("Server Error");
+      res.redirect("/urls");
+      break;
+    }
+  }
+  res.end("Invalid username or password!");
+});
+
+// Log user out
+app.post("/logout", (req, res) => {
+  res.clearCookie("user");
+  res.redirect("/login");
+});
+
+// Validate user registration info and Register user
+app.post("/register", (req, res) => {
+  const id = generateRandomString(8);
+  const email = req.body.email;
+  const password = req.body.password;
+  if (!emailVal(email) || !passwordVal(password)) {
+    res.message = "Email or Password cannot be empty";
+    res.statusCode  = 400;
+  }
+  if (!emailLookUp(email)) {
+    res.message = "Duplicate email found. Please log in instead!"
+    res.statusCode  = 400;
+  }
+  if (emailVal(email) && passVal(password) && emailLookUp(email)) {
+    const newUser = {
+      id,
+      email,
+      password
+    };
+    users[newUser.id] = newUser;
+    console.log(newUser);
+    console.log(users);
+    res.cookie("user", newUser);
+    res.redirect("/urls");
+  }
+});
+
 // Add a new route to database
 app.post("/urls", (req, res) => {
   console.log(req.body);  // Log the POST request body to the console
@@ -133,35 +223,6 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   console.log(`Deleted ${req.body.shortURL}`);  // Log the POST request body to the console
   let shortURL = req.params.shortURL;
   delete urlDatabase[shortURL];
-  res.redirect("/urls");
-});
-
-// Log user in
-app.post("/urls/login", (req, res) => {
-  res.cookie("user",req.body.user);
-  //res.send ("Server Error");
-  res.redirect("/urls");
-});
-
-// Validate user registration info and Register user
-app.post("/urls/register", (req, res) => {
-  const id = generateRandomString(8);
-  const email = req.body.email;
-  const password = req.body.password;
-  const newUser = {
-    id,
-    email,
-    password
-  };
-  users[newUser.id] = newUser;
-  console.log(newUser);
-  res.cookie("user", newUser);
-  res.redirect("/urls");
-});
-
-// Log user out
-app.post("/urls/logout", (req, res) => {
-  res.clearCookie("user");
   res.redirect("/urls");
 });
 

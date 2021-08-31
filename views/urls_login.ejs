@@ -12,14 +12,14 @@
   <body>
     <%- include('partials/_header') %>
     <main style="margin: 1em;">
-      <h3 style = "text-align: left; margin: 1em">Create Account</h3>
-      <form class="form-group" action="/urls/register" method="POST">
-        <div class="container"> <!-- "form-inline"-->
-          <label for="email" style="margin-top: 1em;">Email address</label> <!-- style="text-align: left; margin-left: 2em;"-->
-          <input class="form-control" type="email" name="email" placeholder="Enter email" style="width: 300px"> <!-- text-align: left;-->
-          <label for="password" style="margin-top: 1em;">Password</label>
-          <input class="form-control" type="password" name="password" placeholder="Password" style="width: 300px;">
-          <button type="submit" class="btn btn-primary" style="margin-top: 1em;" >Register</button> <!-- style="text-align: left;margin-left: 2em;"-->
+      <h3 style = "text-align: left; margin: 1em">Login</h3>
+      <form class="form-group" action="/urls/login" method="POST">
+        <div class="container">
+          <label for="email" style="margin-top: 1em;">Email address</label>
+          <input class="form-control" type="email" name="email" placeholder="Enter email" style="width: 300px">
+          <label for="password" style="margin-top: 1em;">Password:</label>
+          <input class="form-control" type="password" name="password" placeholder = "Password" style="width: 300px;">
+          <button type="submit" class="btn btn-primary" style="margin-top: 1em;" >Login</button>
         </div>
       </form>
     </main>
