@@ -14,15 +14,32 @@ app.set("view engine", "ejs");
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
 
-// Use cookie to remember username
+// Use cookie to remember user id
 const cookieParser = require('cookie-parser');
 app.use(cookieParser());
+
+////////////////////////////////////////////////////////////
+// Database init
 
 // Use urlDatabase object to record shortURL-longURL pairs
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
 };
+
+// Use users object to record all users registerred
+const users = {
+  "userRandomID": {
+    id: "userRandomID", 
+    email: "user@example.com", 
+    password: "purple-monkey-dinosaur"
+  },
+ "user2RandomID": {
+    id: "user2RandomID", 
+    email: "user2@example.com", 
+    password: "dishwasher-funk"
+  }
+}
 
 ////////////////////////////////////////////////////////////
 // Declarations of functions
@@ -58,7 +75,7 @@ app.get("/urls.json", (req, res) => {
 // Launch the New page to add a new short-long URL pair.
 app.get("/urls/new", (req, res) => {
   const templateVars = {
-    username: req.cookies["username"]
+    user: req.cookies["user"]
   }
   res.render("urls_new", templateVars);
   //res.render("urls_new");
@@ -68,23 +85,28 @@ app.get("/urls/new", (req, res) => {
 // Launch the Index page = home page
 app.get("/urls", (req, res) => {
   const templateVars = {
-    username: req.cookies["username"],
+    user: req.cookies["user"],
     urls: urlDatabase 
   };
   res.render("urls_index", templateVars);
 });
 
+// Launch Log In page
+app.get("/urls/register", (req, res) => {
+  res.render("urls_register");
+});
+
 // Launch detail page of a shortURL
 app.get("/urls/:shortURL", (req, res) => {
   const templateVars = { 
-    username: req.cookies["username"],
+    user: req.cookies["user"],
     shortURL: req.params.shortURL, 
     longURL: urlDatabase[req.params.shortURL]
   };
   res.render("urls_show", templateVars);
 });
 
-// Launch the long URL website where the shortURL points
+// Launch the website where the shortURL/longURL points
 app.get("/u/:shortURL", (req, res) => {
   const longURL = urlDatabase[req.params.shortURL];
   res.redirect(longURL);
@@ -99,7 +121,7 @@ app.post("/urls", (req, res) => {
   let shortURL = generateRandomString(6);
   urlDatabase[shortURL] = req.body.longURL;
   const templateVars = { 
-    username: req.cookies["username"],
+    user: req.cookies["user"],
     shortURL,
     longURL: req.body.longURL
   };
@@ -112,24 +134,34 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   let shortURL = req.params.shortURL;
   delete urlDatabase[shortURL];
   res.redirect("/urls");
-  /* const templateVars = { 
-    username: req.cookies["username"],
-  };
-  res.redirect("/urls", templateVars);
-  */
 });
 
 // Log user in
 app.post("/urls/login", (req, res) => {
-  res.cookie("username",req.body.username);
+  res.cookie("user",req.body.user);
   //res.send ("Server Error");
+  res.redirect("/urls");
+});
+
+// Validate user registration info and Register user
+app.post("/urls/register", (req, res) => {
+  const id = generateRandomString(8);
+  const email = req.body.email;
+  const password = req.body.password;
+  const newUser = {
+    id,
+    email,
+    password
+  };
+  users[newUser.id] = newUser;
+  console.log(newUser);
+  res.cookie("user", newUser);
   res.redirect("/urls");
 });
 
 // Log user out
 app.post("/urls/logout", (req, res) => {
-  //res.cookie("username", "")
-  res.clearCookie("username");
+  res.clearCookie("user");
   res.redirect("/urls");
 });
 
