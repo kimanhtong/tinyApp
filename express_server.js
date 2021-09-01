@@ -132,8 +132,6 @@ app.get("/urls/new", (req, res) => {
     user_id: req.cookies["user_id"]
   }
   res.render("urls_new", templateVars);
-  //res.render("urls_new");
-
 });
 
 // Launch detail page of a shortURL
@@ -157,22 +155,19 @@ app.get("/u/:shortURL", (req, res) => {
 
 // Log user in
 app.post("/login", (req, res) => {
-  let found = false;
+  if (!emailVal(req.body.email) || !passwordVal(req.body.password)) {
+    res.statusCode = 400;
+    res.end("Email or Password cannot be empty");
+  }
   let userIdArr = Object.keys(users);
   for (let key of userIdArr) {
     if (users[key].email === req.body.email && users[key].password === req.body.password) {
       res.cookie("user_id",req.body.email);
-      //res.send ("Server Error");
       res.redirect("/urls");
-      found = true;
-      break;
     }
   }
-  if (!found) {
-    res.statusCode = 403;
-    res.end("User cannot be found!");
-    
-  }
+  res.statusCode = 403;
+  res.end("User cannot be found!");
 });
 
 // Log user out
@@ -187,12 +182,12 @@ app.post("/register", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
   if (!emailVal(email) || !passwordVal(password)) {
-    res.end("Email or Password cannot be empty");
     res.statusCode(400);
+    res.end("Email or Password cannot be empty");
   }
   if (emailLookUp(email)) {
-    res.end("Duplicate email found. Please log in instead!");
     res.statusCode  = 400;
+    res.end("Duplicate email found. Please log in instead!");
   }
   if (emailVal(email) && passwordVal(password) && !emailLookUp(email)) {
     const newUser = {
