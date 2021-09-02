@@ -17,26 +17,29 @@ app.use(bodyParser.urlencoded({ extended: true }));
 const cookieParser = require('cookie-parser');
 app.use(cookieParser());
 
+// Use bcrypt to store passwords
+const bcrypt = require('bcrypt');
+
 ////////////////////////////////////////////////////////////
 // Database init
 
 // Use urlDatabase object to record shortURL-longURL pairs
 const urlDatabase = {
   b2xVn2: { longURL: 'http://www.lighthouselabs.ca', userID: 'userRandomID' },
-  '9sm5xK': { longURL: 'http://www.google.com', userID: 'userRandomID' },
-  c93ms8: { longURL: 'http://www.test.com', userID: 'userRandomID' },
-  ad83UD: { longURL: 'http://www.youtube.com', userID: 'userRandomID' },
-  '3343sd': { longURL: 'http://www.microsoft.com', userID: 'userRandomID' },
-  b6UTxQ: { longURL: 'https://www.tsn.ca', userID: 'user2RandomID' }
+  '9sm5xK': { longURL: 'http://www.google.com', userID: '5LeSwOVY' },
+  c93ms8: { longURL: 'http://www.test.com', userID: 'oxbD60ax' },
+  ad83UD: { longURL: 'http://www.youtube.com', userID: 't3FIWqOZ' },
+  '3343sd': { longURL: 'http://www.microsoft.com', userID: '5LeSwOVY' },
+  b6UTxQ: { longURL: 'https://www.tsn.ca', userID: '5LeSwOVY' }
 };
 
 // Use users object to record all users registerred
 const users = {
-  'userRandomID': { id: 'userRandomID', email: 'user@example.com', password: 'purple-monkey-dinosaur' },
-  'user2RandomID': { id: 'user2RandomID', email: 'user2@example.com', password: 'dishwasher-funk' },
-  '5LeSwOVY': { id: '5LeSwOVY', email: 'a@b.c', password: 'test' },
-  'oxbD60ax': { id: 'oxbD60ax', email: 'test@test.com', password: 'test' },
-  't3FIWqOZ': { id: 't3FIWqOZ', email: 'c@d.e', password: 'test' }
+  'userRandomID': { id: 'userRandomID', email: 'user@example.com', password: bcrypt.hashSync('purple-monkey-dinosaur', 10)},
+  'user2RandomID': { id: 'user2RandomID', email: 'user2@example.com', password: bcrypt.hashSync('dishwasher-funk', 10)},
+  '5LeSwOVY': { id: '5LeSwOVY', email: 'a@b.c', password: bcrypt.hashSync('test', 10) },
+  'oxbD60ax': { id: 'oxbD60ax', email: 'test@test.com', password: bcrypt.hashSync('test', 10) },
+  't3FIWqOZ': { id: 't3FIWqOZ', email: 'c@d.e', password: bcrypt.hashSync('test', 10) }
 }
 
 ////////////////////////////////////////////////////////////
@@ -233,7 +236,8 @@ app.post('/login', (req, res) => {
   }
   let userIdArr = Object.keys(users);
   for (let key of userIdArr) {
-    if (users[key].email === req.body.email && users[key].password === req.body.password) {
+    let hashedPassword = users[key].password;
+    if (users[key].email === req.body.email && bcrypt.compareSync(req.body.password, hashedPassword)) {
       res.cookie('user_id',req.body.email);
       res.redirect('/urls');
     }
@@ -261,19 +265,16 @@ app.post('/register', (req, res) => {
     res.statusCode  = 400; // Bad request
     res.end('Duplicate email found. Please log in instead!');
   }
-  if (emailVal(email) && passwordVal(password) && !emailLookUp(email)) {
-    const newUser = {
-      id,
-      email,
-      password
-    };
-    users[newUser.id] = newUser;
-    res.cookie('user_id', newUser.email);
-    res.redirect('/urls');
-    console.log(newUser);
-  }
-
-  console.log(users);
+  const hashedPassword = bcrypt.hashSync(password, 10);
+  const newUser = {
+    id,
+    email,
+    password: hashedPassword
+  };
+  users[newUser.id] = newUser;
+  console.log(newUser);
+  res.cookie('user_id', newUser.email);
+  res.redirect('/urls');
 });
 
 // Add a new route to database
