@@ -13,12 +13,26 @@ app.set('view engine', 'ejs');
 const bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Use cookie to remember user id
-const cookieParser = require('cookie-parser');
-app.use(cookieParser());
+// Use cookie-session to keep user id on browsers during an active session
+let cookieSession = require('cookie-session')
+app.use(cookieSession({
+  name: 'session',
+  keys: ['key1', 'key2'],
+  maxAge: 24 * 60 * 60 * 1000 // 24 hours 
+}))
 
 // Use bcrypt to store passwords
 const bcrypt = require('bcrypt');
+
+// Add helper functions
+const { generateRandomString,
+        emailVal,
+        passwordVal,
+        getUserByEmail,
+        urlByUser,
+        urlAuthorized,
+        urlSave,
+      } = require('./helpers');
 
 ////////////////////////////////////////////////////////////
 // Database init
@@ -43,93 +57,6 @@ const users = {
 }
 
 ////////////////////////////////////////////////////////////
-// Declarations of functions
-
-// Function to get a random shortURL string
-const generateRandomString = (length) => {
-  let characters = 'abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  let string = '';
-  for (let i = 0; i < length; i++) {
-    let charIndex = Math.floor(62*Math.random());
-    string = string + characters[charIndex];
-  }
-  return string;
-};
-
-// Function to read data from urlDatabase filtered by email
-const urlsForUser = (email) => {
-  let userID = '';
-  let userDB = {};
-  for (const key in users) {
-    if (users[key].email === email) {
-      userID = users[key].id;
-      break;
-    }
-  }
-  if (userID !== '') {
-    for (const key in urlDatabase) {
-      if (urlDatabase[key].userID === userID) {
-        userDB[key] = urlDatabase[key].longURL;
-      }
-    }
-  }
-  console.log(userDB);
-  return userDB;
-};
-
-// Function to write to urlDatabase based on email
-const urlSave = (email, shortURL, longURL) => {
-  let userID = '';
-  for (const key in users) {
-    if (users[key].email === email) {
-      userID = users[key].id;
-      break;
-    }
-  }
-  if (userID !== '') {
-    let currentURLs = urlsForUser(email);
-    for (const key in currentURLs) {
-      if (currentURLs[key] === longURL) {
-        return false;
-      }
-    }
-    urlDatabase[shortURL] = {
-      longURL,
-      userID
-    };
-    return true;
-  }
-  return false;
-};
-
-// Function to look up an email. Return true if found and false if not found in DB
-const emailLookUp = (email) => {
-  for (const key in users) {
-    if (users[key].email === email) {
-      return true; 
-    }
-  }
-  return false;
-};
-
-// Function to validate empty email
-const emailVal = (email) => {
-  if (email ==='') {
-    return false;
-  } else {
-    return true;
-  }
-};
-
-// Function to validate empty password
-const passwordVal = (password) => {
-  if (password ==='') {
-    return false;
-  } else {
-    return true;
-  }
-};
-////////////////////////////////////////////////////////////
 // For testing or practice purposes - to be updated
 
 app.get('/', (req, res) => {
@@ -149,51 +76,64 @@ app.get('/urls.json', (req, res) => {
 
 // Launch Log In page
 app.get('/login', (req, res) => {
-  const templateVars = {
-    user_id: req.cookies['user_id']
+  let email = req.session.user_id;
+  if (email) {
+    res.redirect('/urls');
+  } else {
+    const templateVars = {
+      user_id: req.session.user_id
+    }
+    res.render('urls_login', templateVars);
   }
-  res.render('urls_login', templateVars);
 });
 
 // Launch Register page
 app.get('/register', (req, res) => {
-  const templateVars = {
-    user_id: req.cookies['user_id']
+  if (req.session.user_id) {
+    res.redirect('/urls');
+  } else {
+    const templateVars = {
+      user_id: req.session.user_id
+    }
+    res.render('urls_register', templateVars);
   }
-  res.render('urls_register', templateVars);
 });
 
 // Launch the Index page = home page
 app.get('/urls', (req, res) => {
-  const user_id = req.cookies['user_id'];
-  const templateVars = {
-    user_id,
-    urls: urlsForUser(user_id)
-  };
-  res.render('urls_index', templateVars);
+  const email = req.session.user_id;
+  if (email) {
+    const templateVars = {
+      user_id: email,
+      urls: urlByUser(email, users, urlDatabase)
+    };
+    res.render('urls_index', templateVars);
+  } else {
+    res.redirect('/login');
+  }
 });
 
 // Launch the New page to add a new short-long URL pair.
 app.get('/urls/new', (req, res) => {
-  if (req.cookies['user_id']) {
+  if (req.session.user_id) {
     const templateVars = {
-      user_id: req.cookies['user_id']
+      user_id: req.session.user_id
     }
     res.render('urls_new', templateVars);
-  } else {
+  } else { 
     res.redirect('/login');
   }
 });
 
 // Launch detail page of a shortURL
 app.get('/urls/:shortURL', (req, res) => {
-  if (req.cookies['user_id']) {
-    let user_id = req.cookies['user_id']; // get the user email
-    let urls = urlsForUser(user_id); // get the short-long URL pairs which user can access
+  if (req.session.user_id) {
+    let email = req.session.user_id; // get the user email
     let shortURL = req.params.shortURL; // get the shortURL which user requests
-    if (urls !== {} && Object.keys(urls).indexOf(shortURL) > -1) {
+    if(urlAuthorized(email, shortURL, users, urlDatabase)) {
+      const urls = urlByUser(email, users, urlDatabase);
       const templateVars = { 
-        user_id,
+        user_id: email,
         shortURL, 
         longURL: urls[shortURL]
       };
@@ -209,11 +149,11 @@ app.get('/urls/:shortURL', (req, res) => {
 
 // Launch the website where the shortURL/longURL points
 app.get('/u/:shortURL', (req, res) => {
-  if (req.cookies['user_id']) {
+  if (req.session.user_id) {
+    let email = req.session.user_id; // get the user email
     let shortURL = req.params.shortURL; // get the shortURL which user requests
-    let email = req.cookies['user_id']; // get the user email
-    let urls = urlsForUser(email); // get the short-long URL pairs which user can access
-    if (urls !== {} && Object.keys(urls).indexOf(shortURL) > -1) { // user can use the short URL
+    if(urlAuthorized(email, shortURL, users, urlDatabase)) {
+      const urls = urlByUser(email, users, urlDatabase);
       const longURL = urls[shortURL];
       res.redirect(longURL);
     } else {                                      // User cannot use the short URL
@@ -231,14 +171,13 @@ app.get('/u/:shortURL', (req, res) => {
 // Log user in
 app.post('/login', (req, res) => {
   if (!emailVal(req.body.email) || !passwordVal(req.body.password)) {
-    res.statusCode = 400; // Bad Request
-    res.end('Email or Password cannot be empty');
+    res.status(400).send('Email or Password cannot be empty');
   }
   let userIdArr = Object.keys(users);
   for (let key of userIdArr) {
     let hashedPassword = users[key].password;
     if (users[key].email === req.body.email && bcrypt.compareSync(req.body.password, hashedPassword)) {
-      res.cookie('user_id',req.body.email);
+      req.session.user_id = req.body.email
       res.redirect('/urls');
     }
   }
@@ -248,7 +187,7 @@ app.post('/login', (req, res) => {
 
 // Log user out
 app.post('/logout', (req, res) => {
-  res.clearCookie('user_id');
+  req.session = null;
   res.redirect('/login');
 });
 
@@ -258,22 +197,19 @@ app.post('/register', (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
   if (!emailVal(email) || !passwordVal(password)) {
-    res.statusCode(400); // Bad request
-    res.end('Email or Password cannot be empty');
+    res.statusCode = 400;
+    res.end('Email or Password cannot be empty'); // Bad request
+    //res.end('Email or Password cannot be empty');
   }
-  if (emailLookUp(email)) {
+  if (getUserByEmail(email, users)) {
     res.statusCode  = 400; // Bad request
-    res.end('Duplicate email found. Please log in instead!');
+    res.end('You are already registered. Just log in!');
   }
   const hashedPassword = bcrypt.hashSync(password, 10);
-  const newUser = {
-    id,
-    email,
-    password: hashedPassword
-  };
+  const newUser = { id, email, password: hashedPassword };
   users[newUser.id] = newUser;
   console.log(newUser);
-  res.cookie('user_id', newUser.email);
+  req.session.user_id = newUser.email
   res.redirect('/urls');
 });
 
@@ -282,70 +218,62 @@ app.post('/urls', (req, res) => {
   const longURL = req.body.longURL;
   if (longURL === '') { // longURL cannot be blank
     res.statusCode = 412 // Precondition failed
-    res.end('Please fill in a valid URL');
-  } else {
-    const shortURL = generateRandomString(6);
-    const email = req.cookies['user_id'];
-    if (urlSave(email, shortURL, longURL)) { // the route is saved successfully
-      const templateVars = { 
-        user_id: email,
-        shortURL,
-        longURL
-      };
-      console.log(`Added ${req.body}`);  // Log the POST request body to the console
-      res.render('urls_show', templateVars);
-    } else {                 // the route already existed
-      res.statusCode = 412;  // Precondition failed
-      res.end ('The URL already exists. Please review it!');
-    }
+    res.end('URL cannot be blank. Please fill in a valid URL');
+  } // valid URL found
+  const shortURL = generateRandomString(6);
+  const email = req.session.user_id;
+  if (urlSave (email, shortURL, longURL, users, urlDatabase)) { // the route is saved successfully
+    const templateVars = { user_id: email, shortURL,longURL };
+    res.render('urls_show', templateVars);
+  } else {           // the route already existed
+    res.statusCode = 412;  // Precondition failed
+    res.end ('The URL already exists. Please review it!');
   }
 });
 
 // Delete an existing route from database
 app.post('/urls/:shortURL/delete', (req, res) => {
-  if (req.cookies['user_id']) {  // Check if user is logged in
+  if (req.session.user_id) {  // Check if user is logged in
     let shortURL = req.params.shortURL;
-    let email = req.cookies['user_id'];
-    let urls = urlsForUser(email);  // Get the list of URL's user can delete
-    if (Object.keys(urls).indexOf(shortURL) > -1) {  // User has the right to delete the shortURL
+    let email = req.session.user_id;
+    if (urlAuthorized(email, shortURL, users, urlDatabase)) {
       delete urlDatabase[shortURL];
       console.log(`Deleted ${req.body.shortURL}`);  // Log the POST request body to the console 
       res.redirect('/urls');
-    } else {                      // User doesn't have the right to delete the shortURL
-      res.statusCode = 401;  // Unauthorized
-      res.end('You cannot delete this route!')
-    }
-  } else {
-    res.redirect('/login');
-  }
+    }                       // User doesn't have the right to delete the shortURL
+    res.statusCode = 401;  // Unauthorized
+    res.end('You cannot delete this route!');
+  } // No cookie found
+  res.redirect('/login');
 });
 
 // Update an existing route from database
 app.post('/urls/:shortURL', (req, res) => {
-  let shortURL = req.params.shortURL;
-  let longURL = req.body.longURL;
-  if (longURL === '') { // longURL cannot be blank
-    res.statusCode = 412 // Precondition failed
-    res.end('Please fill in a valid URL');
-  } else {
-    let email = req.cookies['user_id'];
-    let urls = urlsForUser(email);
-    if (Object.keys(urls).indexOf(shortURL) > -1) { // User has the right to update the shortURL
-      urlDatabase[shortURL].longURL = longURL;
-      console.log(`Updated ${req.params.shortURL}`);  // Log the POST request body to the console
-      res.redirect('/urls');
-    } else {      // User doesn't have the right to update the shortURL
+  if (req.session.user_id) {  // If user is logged in
+    const shortURL = req.params.shortURL;
+    const email = req.session.user_id;
+    if (urlAuthorized(email, shortURL, users, urlDatabase)) { // If user has the access right
+      const longURL = req.body.longURL;
+      if (longURL === '') { // If longURL is blank
+        res.statusCode = 412 // Precondition failed
+        res.end('Please fill in a valid URL');
+      }  // If longURL is not blank
+      let urls = urlByUser(email, users, urlDatabase);
+      if (urlSave(email, shortURL, longURL, users, urlDatabase)) {  // If saved successfully
+        console.log(`Updated ${req.params.shortURL}`);  // Log the POST request body to the console
+        res.redirect('/urls');
+      } // User doesn't have the right to update the shortURL
       res.statusCode = 412 // Precondition failed
-      res.end(' ');
-    }
-  }
+      res.end(`The link ${longURL} already existed. No update is done!`);
+    } // User doesn't have the right to update the shortURL
+    res.statusCode = 401 // Unauthorized
+    res.end('You cannot update this URL');
+  } // If user is not logged in yet
+  res.redirect('/login');
 });
-
-
-
 ////////////////////////////////////////////////////////////
 // TinyApp server keeps listening
 
-app.listen(PORT, () => {
+app.listen (PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
