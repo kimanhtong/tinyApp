@@ -1,7 +1,7 @@
 {
   "name": "tinyapp",
-  "version": "1.0.0",
-  "description": "",
+  "version": "1.0.1",
+  "description": "Fix app crash and permission issues",
   "main": "express_server.js",
   "scripts": {
     "start": "nodemon -L express_server.js",

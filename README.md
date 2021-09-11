@@ -9,15 +9,22 @@ TinyApp is a full stack web application built with Node and Express that allows 
 
 ## Dependencies
 
-- Node.js
+- Node
 - Express
-- EJS
 - bcrypt
 - body-parser
 - cookie-session
+- nodemon
 
 ## Getting Started
 
-- Install all dependencies (using the `npm install` command).
+- Install all dependencies as following:
+  - Node: `nvm install node`
+  - Express: `npm install express`
+  - bcrypt: `npm install -E bcrypt`
+  - body-parser: `npm install body-parser`
+  - cookie-session: `npm install cookie-session`
+  - nodemon: `npm install --save-dev nodemon`
+npm start`
 - Run the development web server using the `node express_server.js` command.
 - Launch http://localhost:8080/urls website, register an account, and log in.
