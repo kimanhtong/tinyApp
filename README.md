@@ -25,6 +25,6 @@ TinyApp is a full stack web application built with Node and Express that allows 
   - body-parser: `npm install body-parser`
   - cookie-session: `npm install cookie-session`
   - nodemon: `npm install --save-dev nodemon`
-npm start`
-- Run the development web server using the `node express_server.js` command.
+
+- Run the development web server using the `node express_server.js` or `npm start` command.
 - Launch http://localhost:8080/urls website, register an account, and log in.
