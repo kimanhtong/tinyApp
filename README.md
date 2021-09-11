@@ -28,3 +28,4 @@ TinyApp is a full stack web application built with Node and Express that allows 
 
 - Run the development web server using the `node express_server.js` or `npm start` command.
 - Launch http://localhost:8080/urls website, register an account, and log in.
+- Run test for the helper functions by `npm test` command.
