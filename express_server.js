@@ -148,21 +148,15 @@ app.get('/urls/:shortURL', (req, res) => {
   }
 });
 
-// Launch the website where the shortURL/longURL points
+// Launch the website where the shortURL/longURL points no matter if user logs on or not
 app.get('/u/:shortURL', (req, res) => {
-  if (req.session.user_id) {
-    const email = req.session.user_id; // get the user email
-    const shortURL = req.params.shortURL; // get the shortURL which user requests
-    if (urlAuthorized(email, shortURL, users, urlDatabase)) {
-      const urls = urlsForUser(email, users, urlDatabase);
-      const longURL = urls[shortURL];
-      res.redirect(longURL);
-    } else { // User cannot use the short URL
-      res.statusCode = 401;
-      res.send('You cannot use this shortlink');
-    }
+  const shortURL = req.params.shortURL; // get the shortURL which user requests
+  if (Object.keys(urlDatabase).indexOf(shortURL) > -1) {
+    const longURL = urlDatabase[shortURL].longURL;
+    res.redirect(longURL);
   } else {
-    res.redirect('/login'); // user has to log on before viewing details
+    res.statusCode = 400; // Bad request
+    res.send(`The tiny URL "${shortURL}"" does not exist. Please try again!`);
   }
 });
 
