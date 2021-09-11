@@ -141,7 +141,7 @@ app.get('/urls/:shortURL', (req, res) => {
       res.render('urls_show', templateVars);
     } else { // If user doesn't have the right to view the requested URL
       res.statusCode = 401; // Unauthorized
-      res.end('You cannot view this detail');
+      res.send('You cannot view this detail');
     }
   } else {
     res.redirect('/login'); // User has to log on before viewing details
@@ -158,8 +158,8 @@ app.get('/u/:shortURL', (req, res) => {
       const longURL = urls[shortURL];
       res.redirect(longURL);
     } else { // User cannot use the short URL
-      res.statusCode = 401; // Unauthorized
-      res.end('You cannot use this shortlink');
+      res.statusCode = 401;
+      res.send('You cannot use this shortlink');
     }
   } else {
     res.redirect('/login'); // user has to log on before viewing details
@@ -171,6 +171,7 @@ app.get('/u/:shortURL', (req, res) => {
 
 // Log user in
 app.post('/login', (req, res) => {
+  let flag = true;
   if (!emailVal(req.body.email) || !passwordVal(req.body.password)) {
     res.status(400).send('Email or Password cannot be empty');
   }
@@ -178,12 +179,15 @@ app.post('/login', (req, res) => {
   for (const key of userIdArr) {
     const hashedPassword = users[key].password;
     if (users[key].email === req.body.email && bcrypt.compareSync(req.body.password, hashedPassword)) {
+      flag = false;
       req.session.user_id = req.body.email
       res.redirect('/urls');
     }
   }
-  res.statusCode = 403; // Forbidden
-  res.end('User cannot be found!');
+  if (flag) {
+    res.statusCode = 403; // Forbidden
+    res.send('User cannot be found!');
+  }
 });
 
 // Log user out
@@ -198,12 +202,12 @@ app.post('/register', (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
   if (!emailVal(email) || !passwordVal(password)) {
-    res.statusCode = 400;
-    res.end('Email or Password cannot be empty'); // Bad request
+    res.statusCode = 400; // Bad request
+    res.send('Email or Password cannot be empty');
   }
   if (getUserByEmail(email, users)) {
-    res.statusCode = 400; // Bad request
-    res.end('You are already registered. Just log in!');
+    res.statusCode = 400
+    res.send('You are already registered. Just log in!');
   }
   const hashedPassword = bcrypt.hashSync(password, 10);
   const newUser = { id, email, password: hashedPassword };
@@ -217,8 +221,8 @@ app.post('/register', (req, res) => {
 app.post('/urls', (req, res) => {
   const longURL = req.body.longURL;
   if (longURL === '') { // longURL cannot be blank
-    res.statusCode = 412 // Precondition failed
-    res.end('URL cannot be blank. Please fill in a valid URL');
+    res.statusCode = 412; // Precondition failed
+    res.send('URL cannot be blank. Please fill in a valid URL');
   } // valid URL found
   const shortURL = generateRandomString(6);
   const email = req.session.user_id;
@@ -227,7 +231,7 @@ app.post('/urls', (req, res) => {
     res.render('urls_show', templateVars);
   } else { // the route already existed
     res.statusCode = 412; // Precondition failed
-    res.end('The URL already exists. Please review it!');
+    res.send('The URL already exists. Please review it!');
   }
 });
 
@@ -240,11 +244,13 @@ app.post('/urls/:shortURL/delete', (req, res) => {
       delete urlDatabase[shortURL];
       console.log(`Deleted ${req.body.shortURL}`); // Log the POST request body to the console
       res.redirect('/urls');
-    } // User doesn't have the right to delete the shortURL
-    res.statusCode = 401; // Unauthorized
-    res.end('You cannot delete this route!');
-  } // No cookie found
-  res.redirect('/login');
+    } else { // User doesn't have the right to delete the shortURL
+      res.statusCode = 401; // Unauthorized
+      res.send('You cannot delete this route!');
+    } // No cookie found
+  } else {
+    res.redirect('/login');
+  }
 });
 
 // Update an existing route from database
@@ -255,20 +261,23 @@ app.post('/urls/:shortURL', (req, res) => {
     if (urlAuthorized(email, shortURL, users, urlDatabase)) { // If user has the access right
       const longURL = req.body.longURL;
       if (longURL === '') { // If longURL is blank
-        res.statusCode = 412 // Precondition failed
-        res.end('Please fill in a valid URL');
+        res.statusCode = 412; // Precondition failed
+        res.send('Please fill in a valid URL');
       } // If longURL is not blank
       if (urlSave(email, shortURL, longURL, users, urlDatabase)) { // If saved successfully
         console.log(`Updated ${req.params.shortURL}`); // Log the POST request body to the console
         res.redirect('/urls');
-      } // User doesn't have the right to update the shortURL
-      res.statusCode = 412 // Precondition failed
-      res.end(`The link ${longURL} already existed. No update is done!`);
-    } // User doesn't have the right to update the shortURL
-    res.statusCode = 401 // Unauthorized
-    res.end('You cannot update this URL');
-  } // If user is not logged in yet
-  res.redirect('/login');
+      } else { // User doesn't have the right to update the shortURL
+        res.statusCode = 412; // Precondition failed
+        res.send(`The link ${longURL} already existed. No update is done!`);
+      }
+    } else { // User doesn't have the right to update the shortURL
+      res.statusCode = 401; // Unauthorized
+      res.send('You cannot update this URL');
+    }
+  } else { // If user is not logged in yet
+    res.redirect('/login');
+  }
 });
 /// /////////////////////////////////////////////////////////
 // TinyApp server keeps listening
